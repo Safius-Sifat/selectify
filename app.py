@@ -10,13 +10,43 @@ import numpy as np
 
 # LangChain Imports
 from langchain_experimental.agents import create_csv_agent
-from langchain.agents.agent_types import AgentType
-from langchain.memory import ConversationBufferMemory
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
-from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_experimental.tools import PythonAstREPLTool
 from dotenv import load_dotenv
+from enum import Enum
+
+# Try to import memory classes from available locations
+try:
+    from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+except ImportError:
+    try:
+        from langchain_classic.memory import ConversationBufferMemory
+        ConversationBufferWindowMemory = ConversationBufferMemory  # Fallback
+    except ImportError:
+        # Define minimal memory classes as fallback
+        class ConversationBufferMemory:
+            def __init__(self, **kwargs):
+                self.memory_key = kwargs.get('memory_key', 'chat_history')
+                self.return_messages = kwargs.get('return_messages', False)
+                self.chat_memory = []
+        
+        class ConversationBufferWindowMemory(ConversationBufferMemory):
+            def __init__(self, k=5, **kwargs):
+                super().__init__(**kwargs)
+                self.k = k
+
+# Define AgentType locally since it's deprecated in newer langchain versions
+class AgentType(str, Enum):
+    ZERO_SHOT_REACT_DESCRIPTION = "zero-shot-react-description"
+    REACT_DOCSTORE = "react-docstore"
+    SELF_ASK_WITH_SEARCH = "self-ask-with-search"
+    CONVERSATIONAL_REACT_DESCRIPTION = "conversational-react-description"
+    CHAT_ZERO_SHOT_REACT_DESCRIPTION = "chat-zero-shot-react-description"
+    CHAT_CONVERSATIONAL_REACT_DESCRIPTION = "chat-conversational-react-description"
+    STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION = "structured-chat-zero-shot-react-description"
+    OPENAI_FUNCTIONS = "openai-functions"
+    OPENAI_MULTI_FUNCTIONS = "openai-multi-functions"
 
 # Load environment variables
 load_dotenv()
@@ -284,7 +314,7 @@ class LLMAgent:
     
     # Common system template portions
     COMMON_SYSTEM_TEMPLATE = """
-    # ANALYZIA Data Analysis Agent
+    # SELECTIFY Supplier Selection Agent
 
 You are an expert data analyst with deep experience across industries. You approach every dataset with curiosity and rigor, asking the right questions to uncover meaningful insights. Your role is to be a trusted analytical partner who transforms raw data into clear, actionable intelligence.
 
@@ -601,7 +631,7 @@ This framework ensures natural, helpful data analysis responses that match the u
     
     def __init__(self, google_api_key=None):
         self.google_api_key = google_api_key
-        self.memory = ConversationBufferWindowMemory(k=3, memory_key="chat_history", return_messages=True)
+        self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         self.google_chat = None
         self.llm = None
     
@@ -1156,14 +1186,14 @@ class DataApp:
         """Run the main application"""
         # Configure Streamlit page
         st.set_page_config(
-            page_title="Analyzia - AI Data Analysis",
+            page_title="Selectify - AI Powered Supplier Selection Platform",
             page_icon="🤖", 
             layout="centered",
             initial_sidebar_state="expanded",
             menu_items={
-                'Get Help': 'https://github.com/ahammadnafiz/Analyzia',
-                'Report a bug': 'https://github.com/ahammadnafiz/Analyzia/issues',
-                'About': "Analyzia - AI-Powered Data Analysis Platform"
+                'Get Help': 'https://github.com/Safius-Sifat/selectify',
+                'Report a bug': 'https://github.com/Safius-Sifat/selectify/issues',
+                'About': "Selectify -AI Powered Supplier Selection Platform"
             }
         )
         
@@ -1245,8 +1275,8 @@ class DataApp:
             </style>
             """, unsafe_allow_html=True)
             
-            st.markdown("# 🤖 Analyzia")
-            st.markdown("*AI-Powered Data Analysis*")
+            st.markdown("# 🤖 Selectify")
+            st.markdown("*AI Powered Supplier Selection Platform*")
             st.markdown("---")
             
             # API Key section
@@ -1283,12 +1313,12 @@ class DataApp:
                 self.analysis_agent.setup_agent(self.file_path)
         
         # Main content area - always show chat interface with title
-        # Always show the Analyzia title at the top center
+        # Always show the Selectify title at the top center
         st.markdown("""
         <div style="text-align: center; padding: 1rem 0 2rem 0;">
-            <h1 style="margin-bottom: 0.5rem; font-size: 3rem; font-weight: bold;">Analyzia</h1>
+            <h1 style="margin-bottom: 0.5rem; font-size: 3rem; font-weight: bold;">Selectify</h1>
             <p style="color: #666; font-size: 1.1rem; margin: 0;">
-                AI-Powered Data Analysis Platform
+                AI Powered Supplier Selection Platform
             </p>
         </div>
         """, unsafe_allow_html=True)
